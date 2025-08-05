@@ -1,0 +1,52 @@
+const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+// 🔗 List all app folders you want to control here:
+const apps = ['Vault360', 'SkyLink360', 'CoreEngineerAI'];
+
+apps.forEach(app => {
+  const appPath = path.join(__dirname, app);
+  const packageJsonPath = path.join(appPath, 'package.json');
+
+  if (!fs.existsSync(packageJsonPath)) {
+    console.log(`❌ Skipping ${app}: No package.json found.`);
+    return;
+  }
+
+  console.log(`📦 Installing dependencies for ${app}...`);
+  exec(`cd ${appPath} && npm install`, (installErr) => {
+    if (installErr) {
+      console.error(`🚨 Failed to install ${app}:`, installErr);
+      return;
+    }
+    console.log(`✅ Installed ${app}`);
+
+    console.log(`🚀 Starting ${app}...`);
+    exec(`cd ${appPath} && npm start`, (startErr) => {
+      if (startErr) {
+        console.error(`🚨 Failed to start ${app}:`, startErr);
+        return;
+      }
+      console.log(`✅ Running ${app}`);
+    });
+  });
+});
+
+{
+  "status": "idle",
+  "apps": {
+    "Vault360": "waiting",
+    "SkyLink360": "waiting",
+    "CoreEngineerAI": "waiting"
+  }
+}
+
+{
+  "status": "idle",
+  "apps": {
+    "Vault360": "waiting",
+    "SkyLink360": "waiting",
+    "CoreEngineerAI": "waiting"
+  }
+}
