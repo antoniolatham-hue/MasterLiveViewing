@@ -1,0 +1,91 @@
+const fs = require('fs');
+const path = require('path');
+const EventEmitter = require('events');
+
+const agentSystem = new EventEmitter();
+
+// --- CONFIG ---
+const agents = [
+  { name: 'wifiAgent', status: 'idle', description: 'Monitors WiFi strength and availability' },
+  { name: 'gpsAgent', status: 'idle', description: 'Tracks device GPS location' },
+  { name: 'syncAgent', status: 'idle', description: 'Auto-syncs files to GitHub & Vercel' }
+];
+
+const watchPaths = [
+  path.join(__dirname, '..'), // Watch root repo
+];
+
+// --- HELPERS ---
+function logEvent(msg) {
+  const logPath = path.join(__dirname, 'agent_log.txt');
+  const logEntry = `[${new Date().toISOString()}] ${msg}\n`;
+  fs.appendFileSync(logPath, logEntry);
+  console.log(msg);
+}
+
+// --- AGENT BROADCAST TO HTML DASHBOARD ---
+function updateLiveDashboard() {
+  const dashboardPath = path.join(__dirname, '..', 'LiveAgentDashboard.html');
+  const statusHTML = agents.map(agent => `
+    <tr>
+      <td>${agent.name}</td>
+      <td>${agent.status}</td>
+      <td>${agent.description}</td>
+    </tr>
+  `).join('');
+
+  const fullHTML = `
+    <html><head><title>Agent Status</title></head><body>
+      <h2>Live Agent Monitor</h2>
+      <table border="1" cellpadding="8" cellspacing="0">
+        <tr><th>Agent</th><th>Status</th><th>Description</th></tr>
+        ${statusHTML}
+      </table>
+      <button onclick="location.reload()">🔁 Run Now</button>
+    </body></html>
+  `;
+
+  fs.writeFileSync(dashboardPath, fullHTML);
+  logEvent('Dashboard updated with latest agent statuses.');
+}
+
+// --- SIMULATE TASKS ---
+function runAgentTask(agentName) {
+  const agent = agents.find(a => a.name === agentName);
+  if (!agent) return;
+
+  agent.status = 'running';
+  updateLiveDashboard();
+  logEvent(`${agentName} started.`);
+
+  setTimeout(() => {
+    agent.status = 'idle';
+    updateLiveDashboard();
+    logEvent(`${agentName} completed.`);
+  }, 3000); // simulate 3s work
+}
+
+// --- FILE WATCHER ---
+watchPaths.forEach(dir => {
+  fs.watch(dir, { recursive: true }, (eventType, filename) => {
+    if (!filename.includes('node_modules') && !filename.includes('.git')) {
+      logEvent(`Detected ${eventType} in ${filename}`);
+      runAgentTask('syncAgent');
+    }
+  });
+});
+
+// --- INITIAL BOOTSTRAP ---
+function bootstrapSystem() {
+  logEvent('✅ AutoSyncAgentSystem booted.');
+  agents.forEach(agent => runAgentTask(agent.name));
+  updateLiveDashboard();
+}
+
+// --- LISTENERS ---
+agentSystem.on('trigger', agentName => {
+  runAgentTask(agentName);
+});
+
+// --- STARTUP ---
+bootstrapSystem();
