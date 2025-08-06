@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Run Error Checker</title></head>
+<body>
+  <h2>Run Error Checker Agent</h2>
+  <button onclick="runChecker()">Run Now</button>
+  <p id="output">Status: Idle</p>
+
+  <script>
+    function runChecker() {
+      fetch('/run-error-checker')
+        .then(res => res.text())
+        .then(msg => document.getElementById("output").innerText = "Status: " + msg)
+        .catch(err => document.getElementById("output").innerText = "Error running agent");
+    }
+  </script>
+</body>
+</html>
