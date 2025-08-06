@@ -1,0 +1,16 @@
+<!-- File: live_ui/errorLogViewer.html -->
+<!DOCTYPE html>
+<html>
+<head><title>Error Log Viewer</title></head>
+<body>
+  <h2>Error Log Viewer</h2>
+  <pre id="logDisplay">Loading logs...</pre>
+
+  <script>
+    fetch('/logs/error_log.txt')
+      .then(res => res.text())
+      .then(data => document.getElementById("logDisplay").innerText = data)
+      .catch(err => document.getElementById("logDisplay").innerText = "No logs found.");
+  </script>
+</body>
+</html>
