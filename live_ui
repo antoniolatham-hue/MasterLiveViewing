@@ -1,0 +1,4 @@
+MasterLiveViewing/
+├── live_ui/
+│   ├── errorLogViewer.html
+│   └── autoLiveViewer.js
