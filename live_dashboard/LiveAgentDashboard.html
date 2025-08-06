@@ -1,1 +1,60 @@
 live_dashboard/LiveAgentDashboard.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live Agent Dashboard</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #0f0;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffcc;
+    }
+    .agent-status {
+      background: #222;
+      border: 1px solid #0f0;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .online {
+      color: #0f0;
+    }
+    .offline {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Live Agent Dashboard</h1>
+  <div id="agents"></div>
+
+  <script>
+    // Example live sync list (replace with live data later)
+    const agents = [
+      { name: "SyncAgent001", status: "online" },
+      { name: "SecurityBot", status: "online" },
+      { name: "ErrorFixer", status: "offline" },
+      { name: "AutoPusher", status: "online" },
+    ];
+
+    const container = document.getElementById("agents");
+
+    agents.forEach(agent => {
+      const div = document.createElement("div");
+      div.className = "agent-status";
+      div.innerHTML = `
+        <strong>${agent.name}</strong><br />
+        Status: <span class="${agent.status}">${agent.status}</span>
+      `;
+      container.appendChild(div);
+    });
+
+    Create LiveAgentDashboard.html inside live_dashboard folder
+  </script>
+</body>
+</html>
