@@ -1,6 +1,6 @@
 /* 
   autoLiveAgentSystem.js 
-  Folder: /auto_live_monitor/
+  Folder: /auto_live_monitor/ or root
   Purpose:
     ✅ Auto-redirect all agents to live dashboard
     ✅ Template to create future agents
@@ -11,7 +11,7 @@
 function runAgent(agentName, taskCallback) {
   console.log(`[${agentName}] is running...`);
 
-  // Execute task if provided
+  // Execute custom task if provided
   if (typeof taskCallback === "function") {
     taskCallback();
   }
@@ -36,7 +36,7 @@ const audioSyncAgent = () => runAgent("AudioSyncAgent", () => {
 });
 
 // ======== Choose Which Agent to Run ========
-// Uncomment only ONE line to test:
+// Uncomment only ONE line below at a time to test:
 
 powerAgent();
 // batteryAgent();
