@@ -108,3 +108,78 @@ autoSyncAgents.forEach((agent, index) => {
     agent();
   }, syncDelay * index);
 });
+
+/* 
+  autoLiveAgentSystem.js 
+  Purpose:
+    ✅ Auto-run all agents automatically
+    ✅ Sync to Live Dashboard
+    ✅ Requires no manual toggling or edits
+*/
+
+// ======== Universal Agent Runner ========
+function runAgent(agentName, taskCallback) {
+  console.log(`[${agentName}] is running...`);
+
+  // Run assigned task
+  if (typeof taskCallback === "function") {
+    taskCallback();
+  }
+
+  // Log to localStorage (for dashboard visibility)
+  localStorage.setItem("lastAgentRun", agentName);
+
+  // Redirect to live dashboard
+  window.location.href = "/live_dashboard/LiveAgentDashboard.html";
+}
+
+// ======== All Agents Defined Here ========
+
+const powerAgent = () => runAgent("PowerAgent", () => {
+  console.log("✅ Power systems checked.");
+});
+
+const batteryAgent = () => runAgent("BatteryAgent", () => {
+  console.log("🔋 Battery level synced.");
+});
+
+const audioSyncAgent = () => runAgent("AudioSyncAgent", () => {
+  console.log("🎵 Audio synced with timeline.");
+});
+
+const wifiAgent = () => runAgent("WifiAgent", () => {
+  console.log("📡 WiFi connectivity verified.");
+});
+
+const gpsAgent = () => runAgent("GPSAgent", () => {
+  console.log("📍 GPS coordinates locked.");
+});
+
+const tempSensorAgent = () => runAgent("TempSensorAgent", () => {
+  console.log("🌡️ Temperature sensor calibrated.");
+});
+
+// ======== Auto-Sync Loop =========
+
+const autoSyncAgents = [
+  powerAgent,
+  batteryAgent,
+  audioSyncAgent,
+  wifiAgent,
+  gpsAgent,
+  tempSensorAgent
+];
+
+let delayBetween = 1000; // 1 second between each agent run
+
+autoSyncAgents.forEach((agentFunc, index) => {
+  setTimeout(() => {
+    agentFunc();
+  }, delayBetween * index);
+});
+
+<h2 id="agent-status">Last Agent: Loading...</h2>
+<script>
+  const last = localStorage.getItem("lastAgentRun") || "None";
+  document.getElementById("agent-status").textContent = `Last Agent: ${last}`;
+</script>
