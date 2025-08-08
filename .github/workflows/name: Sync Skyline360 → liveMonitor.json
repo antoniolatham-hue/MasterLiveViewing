@@ -1,8 +1,9 @@
-name: Sync Skyline360 → liveMonitor.json
+name: Sync SkyLink360 → liveMonitor.json
+
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes
+    - cron: "*/15 * * * *" # every 15 minutes
 
 permissions:
   contents: write
@@ -21,57 +22,36 @@ jobs:
             sudo apt-get install -y jq
           fi
 
-      # ⚠️ Set REPO to your exact repo name: Skyline360 or SkyLink360
-      - name: Get latest commit from Sky(L)ine/Link360
+      - name: Get latest commit from SkyLink360
         id: get
         env:
           OWNER: antoniolatham-hue
-          REPO: Skyline360   # <— change to SkyLink360 if that's the real name
+          REPO: SkyLink360
         run: |
-          curl -s https://api.github.com/repos/$OWNER/$REPO/commits?per_page=1 > /tmp/commits.json
+          curl -s https://api.github.com/repos/$OWNER/$REPO/commits > /tmp/commits.json
           SHA=$(jq -r '.[0].sha' /tmp/commits.json)
           MSG=$(jq -r '.[0].commit.message' /tmp/commits.json)
           DATE=$(jq -r '.[0].commit.author.date' /tmp/commits.json)
           URL="https://github.com/$OWNER/$REPO/commit/$SHA"
-          echo "sha=$SHA"   >> $GITHUB_OUTPUT
-          echo "msg=$MSG"   >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "url=$URL"   >> $GITHUB_OUTPUT
-          echo "repo_url=https://github.com/$OWNER/$REPO" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
 
-      - name: Create liveMonitor.json if missing
+      - name: Save data to liveMonitor.json
         run: |
-          test -f liveMonitor.json || echo '{ "apps": [] }' > liveMonitor.json
+          mkdir -p data
+          jq -n \
+            --arg sha "${{ steps.get.outputs.sha }}" \
+            --arg msg "${{ steps.get.outputs.msg }}" \
+            --arg date "${{ steps.get.outputs.date }}" \
+            --arg url "${{ steps.get.outputs.url }}" \
+            '{sha: $sha, message: $msg, date: $date, url: $url}' > data/liveMonitor.json
 
-      - name: Update liveMonitor.json
-        env:
-          SHA:  ${{ steps.get.outputs.sha }}
-          MSG:  ${{ steps.get.outputs.msg }}
-          DATE: ${{ steps.get.outputs.date }}
-          URL:  ${{ steps.get.outputs.url }}
-          REPO_URL: ${{ steps.get.outputs.repo_url }}
+      - name: Commit and push changes
         run: |
-          jq \
-          --arg sha "$SHA" --arg msg "$MSG" --arg date "$DATE" \
-          --arg url "$URL" --arg repo "$REPO_URL" '
-            .apps |=
-              (map(select(.name != "SkyLink360")) + [{
-                name: "SkyLink360",
-                status: "Live",
-                repo: $repo,
-                lastCommit: { sha: $sha, message: $msg, date: $date, url: $url }
-              }])
-          ' liveMonitor.json > liveMonitor.updated.json
-          mv liveMonitor.updated.json liveMonitor.json
-
-      - name: Commit & push if changed
-        run: |
-          if ! git diff --quiet; then
-            git config user.name  "Auto Sync Bot"
-            git config user.email "actions@github.com"
-            git add liveMonitor.json
-            git commit -m "chore: sync SkyLink360 → liveMonitor.json (${{ steps.get.outputs.sha }})"
-            git push
-          else
-            echo "No changes."
-          fi
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/liveMonitor.json
+          git commit -m "Update liveMonitor.json [skip ci]" || exit 0
+          git push
