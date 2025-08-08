@@ -1,5 +1,4 @@
-name: Sync Sky(L)ink360 → liveMonitor.json
-
+name: Sync Skyline360 → liveMonitor.json
 on:
   workflow_dispatch: {}
   schedule:
