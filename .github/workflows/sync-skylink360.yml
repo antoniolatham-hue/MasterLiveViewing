@@ -1,0 +1,78 @@
+name: Sync Sky(L)ink360 → liveMonitor.json
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MasterLiveViewing
+        uses: actions/checkout@v4
+
+      - name: Ensure jq is available
+        run: |
+          if ! command -v jq >/dev/null; then
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+          fi
+
+      # ⚠️ Set REPO to your exact repo name: Skyline360 or SkyLink360
+      - name: Get latest commit from Sky(L)ine/Link360
+        id: get
+        env:
+          OWNER: antoniolatham-hue
+          REPO: Skyline360   # <— change to SkyLink360 if that's the real name
+        run: |
+          curl -s https://api.github.com/repos/$OWNER/$REPO/commits?per_page=1 > /tmp/commits.json
+          SHA=$(jq -r '.[0].sha' /tmp/commits.json)
+          MSG=$(jq -r '.[0].commit.message' /tmp/commits.json)
+          DATE=$(jq -r '.[0].commit.author.date' /tmp/commits.json)
+          URL="https://github.com/$OWNER/$REPO/commit/$SHA"
+          echo "sha=$SHA"   >> $GITHUB_OUTPUT
+          echo "msg=$MSG"   >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "url=$URL"   >> $GITHUB_OUTPUT
+          echo "repo_url=https://github.com/$OWNER/$REPO" >> $GITHUB_OUTPUT
+
+      - name: Create liveMonitor.json if missing
+        run: |
+          test -f liveMonitor.json || echo '{ "apps": [] }' > liveMonitor.json
+
+      - name: Update liveMonitor.json
+        env:
+          SHA:  ${{ steps.get.outputs.sha }}
+          MSG:  ${{ steps.get.outputs.msg }}
+          DATE: ${{ steps.get.outputs.date }}
+          URL:  ${{ steps.get.outputs.url }}
+          REPO_URL: ${{ steps.get.outputs.repo_url }}
+        run: |
+          jq \
+          --arg sha "$SHA" --arg msg "$MSG" --arg date "$DATE" \
+          --arg url "$URL" --arg repo "$REPO_URL" '
+            .apps |=
+              (map(select(.name != "SkyLink360")) + [{
+                name: "SkyLink360",
+                status: "Live",
+                repo: $repo,
+                lastCommit: { sha: $sha, message: $msg, date: $date, url: $url }
+              }])
+          ' liveMonitor.json > liveMonitor.updated.json
+          mv liveMonitor.updated.json liveMonitor.json
+
+      - name: Commit & push if changed
+        run: |
+          if ! git diff --quiet; then
+            git config user.name  "Auto Sync Bot"
+            git config user.email "actions@github.com"
+            git add liveMonitor.json
+            git commit -m "chore: sync SkyLink360 → liveMonitor.json (${{ steps.get.outputs.sha }})"
+            git push
+          else
+            echo "No changes."
+          fi
