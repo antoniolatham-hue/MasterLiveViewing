@@ -1,0 +1,38 @@
+name: Sync SkyLink360 -> liveMonitor.json
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MasterLiveViewing repo
+        uses: actions/checkout@v3
+        with:
+          repository: antoniolatham-hue/MasterLiveViewing
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: masterlive
+
+      - name: Checkout SkyLink360 repo
+        uses: actions/checkout@v3
+        with:
+          repository: antoniolatham-hue/Skyline360
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: skylink360
+
+      - name: Copy data to liveMonitor.json
+        run: |
+          mkdir -p masterlive/data
+          cp skylink360/liveMonitor.json masterlive/data/liveMonitor.json
+
+      - name: Commit & Push changes
+        run: |
+          cd masterlive
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/liveMonitor.json
+          git commit -m "Auto-sync SkyLink360 -> liveMonitor.json" || echo "No changes to commit"
+          git push
