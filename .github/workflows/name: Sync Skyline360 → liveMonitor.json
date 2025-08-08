@@ -1,9 +1,9 @@
-name: Sync SkyLink360 → liveMonitor.json
+name: Sync SkyLink360 -> liveMonitor.json
 
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/15 * * * *" # every 15 minutes
+    - cron: "*/15 * * * *"  # every 15 minutes
 
 permissions:
   contents: write
@@ -15,43 +15,28 @@ jobs:
       - name: Checkout MasterLiveViewing
         uses: actions/checkout@v4
 
-      - name: Ensure jq is available
+      - name: Ensure jq
         run: |
-          if ! command -v jq >/dev/null; then
-            sudo apt-get update -y
-            sudo apt-get install -y jq
-          fi
+          sudo apt-get update -y
+          sudo apt-get install -y jq
 
-      - name: Get latest commit from SkyLink360
-        id: get
+      - name: Get latest Skyline360 commit
         env:
           OWNER: antoniolatham-hue
-          REPO: SkyLink360
+          REPO: Skyline360
         run: |
-          curl -s https://api.github.com/repos/$OWNER/$REPO/commits > /tmp/commits.json
+          curl -s https://api.github.com/repos/$OWNER/$REPO/commits?per_page=1 > /tmp/commits.json
           SHA=$(jq -r '.[0].sha' /tmp/commits.json)
           MSG=$(jq -r '.[0].commit.message' /tmp/commits.json)
           DATE=$(jq -r '.[0].commit.author.date' /tmp/commits.json)
           URL="https://github.com/$OWNER/$REPO/commit/$SHA"
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
-          echo "msg=$MSG" >> $GITHUB_OUTPUT
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "url=$URL" >> $GITHUB_OUTPUT
+          jq -n --arg sha "$SHA" --arg msg "$MSG" --arg date "$DATE" --arg url "$URL" \
+            '{repo:"Skyline360", sha:$sha, message:$msg, date:$date, url:$url}' > liveMonitor.json
 
-      - name: Save data to liveMonitor.json
+      - name: Commit & push update
         run: |
-          mkdir -p data
-          jq -n \
-            --arg sha "${{ steps.get.outputs.sha }}" \
-            --arg msg "${{ steps.get.outputs.msg }}" \
-            --arg date "${{ steps.get.outputs.date }}" \
-            --arg url "${{ steps.get.outputs.url }}" \
-            '{sha: $sha, message: $msg, date: $date, url: $url}' > data/liveMonitor.json
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/liveMonitor.json
-          git commit -m "Update liveMonitor.json [skip ci]" || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add liveMonitor.json
+          git commit -m "chore: update liveMonitor.json from Skyline360" || echo "No changes"
           git push
