@@ -1,0 +1,35 @@
+name: Global Push & Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:          # lets you press “Run workflow” by hand
+  schedule:
+    - cron: '*/30 * * * *'    # every 30 minutes (remove if you don't want auto)
+
+permissions:
+  contents: write             # allow pushes from this workflow
+
+jobs:
+  push-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}   # fixes “token required”
+
+      - name: Configure git
+        run: |
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      # ----- your automated work goes here -----
+      - name: Example no-op change (safe)
+        run: |
+          echo "last sync: $(date -u)" > .last_sync
+          git add -A
+          git commit -m "auto: sync [skip ci]" || echo "nothing to commit"
+
+      - name: Push changes
+        run: git push origin "${{ github.ref_name }}"
