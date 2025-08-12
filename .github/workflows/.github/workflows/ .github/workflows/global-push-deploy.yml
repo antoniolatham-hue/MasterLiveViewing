@@ -1,0 +1,53 @@
+name: Global Push & Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:      # lets you press "Run workflow" in Actions
+  schedule:
+    - cron: "*/30 * * * *"  # every 30 minutes
+
+permissions:
+  contents: write
+
+jobs:
+  push-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GHToken }}  # <-- uses your secret EXACTLY named GHToken
+    steps:
+      - name: Checkout hub repo (this repo)
+        uses: actions/checkout@v4
+
+      - name: Configure git author
+        run: |
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Login gh cli
+        run: echo "$GH_TOKEN" | gh auth login --with-token
+
+      - name: Push any pending changes across ALL your repos
+        run: |
+          set -e
+          mkdir -p /tmp/repos && cd /tmp/repos
+
+          # List all repos you own (public & private)
+          gh repo list "$GITHUB_ACTOR" --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner' | while read -r repo; do
+            echo "==> Processing $repo"
+            # Clone with token in URL so push works
+            git clone --depth=1 "https://${GH_TOKEN}@github.com/${repo}.git" repo-tmp || { echo "clone failed: $repo"; continue; }
+            cd repo-tmp
+
+            # Stage & commit only if there are real changes
+            git add -A
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: automated global push from MasterLiveViewing [skip ci]" || true
+              git push origin HEAD || true
+            else
+              echo "No changes to push in $repo"
+            fi
+
+            cd ..
+            rm -rf repo-tmp
+          done
