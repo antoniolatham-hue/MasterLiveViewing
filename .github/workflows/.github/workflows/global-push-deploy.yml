@@ -1,0 +1,30 @@
+name: Global Push & Deploy
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # Every 30 minutes
+  workflow_dispatch:        # Manual trigger button in GitHub Actions tab
+  issue_comment:
+    types: [created]         # Run when comment is posted
+
+jobs:
+  push-deploy:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '/push-deploy') || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Deploy
+        run: |
+          echo "🚀 Starting Global Push & Deploy..."
+          # Replace with your actual deploy command
+          npm run deploy
