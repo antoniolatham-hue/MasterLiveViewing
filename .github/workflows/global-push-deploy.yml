@@ -1,0 +1,31 @@
+name: Global Push & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  push-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hub repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Push changes for all repos
+        run: |
+          echo "Pushing changes to all repos..."
+          for repo in $(gh repo list YOUR_GITHUB_USERNAME --limit 100 --json name -q '.[].name'); do
+            echo "Processing $repo..."
+            gh repo clone YOUR_GITHUB_USERNAME/$repo temp/$repo
+            cd temp/$repo
+            git add .
+            git commit -m "Automated global push from hub" || echo "No changes to commit in $repo"
+            git push || echo "No push needed for $repo"
+            cd ../..
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
