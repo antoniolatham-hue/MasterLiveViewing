@@ -2,52 +2,46 @@ name: Global Push & Deploy
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:      # lets you press "Run workflow" in Actions
-  schedule:
-    - cron: "*/30 * * * *"  # every 30 minutes
+    branches: [main]
+    # Only run when these change (prevents noisy failures)
+    paths:
+      - 'skylink360/liveMonitor.json'
+      - 'masterlive/**'
+      - '.github/workflows/global-push-deploy.yml'
+  workflow_dispatch:
 
+# Allow this workflow to commit back to the repo
 permissions:
   contents: write
 
 jobs:
   push-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GHToken }}  # <-- uses your secret EXACTLY named GHToken
     steps:
-      - name: Checkout hub repo (this repo)
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Configure git author
-        run: |
-          git config user.name  "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-
-      - name: Login gh cli
-        run: echo "$GH_TOKEN" | gh auth login --with-token
-
-      - name: Push any pending changes across ALL your repos
+      # Safe: won't fail if the JSON file doesn't exist
+      - name: Prepare masterlive data
         run: |
           set -e
-          mkdir -p /tmp/repos && cd /tmp/repos
+          mkdir -p masterlive/data
+          if [ -f skylink360/liveMonitor.json ]; then
+            cp skylink360/liveMonitor.json masterlive/data/
+          else
+            echo "No skylink360/liveMonitor.json found — skipping."
+          fi
 
-          # List all repos you own (public & private)
-          gh repo list "$GITHUB_ACTOR" --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner' | while read -r repo; do
-            echo "==> Processing $repo"
-            # Clone with token in URL so push works
-            git clone --depth=1 "https://${GH_TOKEN}@github.com/${repo}.git" repo-tmp || { echo "clone failed: $repo"; continue; }
-            cd repo-tmp
-
-            # Stage & commit only if there are real changes
-            git add -A
-            if ! git diff --cached --quiet; then
-              git commit -m "chore: automated global push from MasterLiveViewing [skip ci]" || true
-              git push origin HEAD || true
-            else
-              echo "No changes to push in $repo"
-            fi
-
-            cd ..
-            rm -rf repo-tmp
-          done
+      # Only commit/push when there are actual changes
+      - name: Commit and push if changed
+        run: |
+          set -e
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Automated sync $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
+          fi
