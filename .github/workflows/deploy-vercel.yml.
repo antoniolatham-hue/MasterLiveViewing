@@ -2,8 +2,8 @@ name: Deploy to Vercel
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main]   # change if your default branch isn't 'main'
+  workflow_dispatch:    # lets you run it manually from the Actions tab
 
 jobs:
   deploy:
@@ -19,6 +19,15 @@ jobs:
 
       - name: Install Vercel CLI
         run: npm install --global vercel
+
+      # If your repo has a package.json, install deps; otherwise this safely skips
+      - name: Install deps (if present)
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found; skipping npm ci"
+          fi
 
       - name: Deploy (production)
         env:
