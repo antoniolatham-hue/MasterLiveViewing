@@ -1,0 +1,43 @@
+name: CI & Deploy (Vercel)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Make sure the deploy script is executable (uploads via web don't keep +x)
+      - name: Make deploy script executable
+        run: chmod +x scripts/deploy.sh
+
+      # (Optional) Install dependencies if you have a package.json.
+      # Keeps things safe if your repo is purely static.
+      - name: Install deps (if present)
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found; skipping npm ci"
+          fi
+
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: |
+          # Ensure Vercel CLI is available for npx (warm cache)
+          npm view vercel version >/dev/null 2>&1 || true
+          bash scripts/deploy.sh
